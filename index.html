@@ -56,6 +56,7 @@
         const url = L.Util.template("https://cyberjapandata.gsi.go.jp/xyz/experimental_anno/{z}/{x}/{y}.geojson", coords);
         fetch(url).then(a => a.ok ? a.json() : null).then(json => {
           if (json === null) return;
+          if (!this._map || this._map.getZoom() < 13) return;
           json.features.filter(x => x.properties.annoCtg.match(/^居住/)).forEach(x => {
             const knj = x.properties.knj;
             const k = knj.replace(/（.+）$/, "").split("").pop();
@@ -82,6 +83,9 @@
       const z = this.getZoom();
       if (z < 13) {
         if (this.hasLayer(knjLayer)) this.removeLayer(knjLayer);
+        map.eachLayer(function(layer) {
+          if (layer._icon !== undefined) map.removeLayer(layer);
+        });
       } else {
         if (!this.hasLayer(knjLayer)) this.addLayer(knjLayer);
       }
