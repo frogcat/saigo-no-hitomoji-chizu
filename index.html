@@ -29,7 +29,7 @@
 <body>
   <div id="map"></div>
   <script>
-    var map = L.map("map", L.extend({
+    const map = L.map("map", L.extend({
       zoom: 13,
       maxZoom: 18,
       center: [35.6707, 139.7852]
@@ -38,25 +38,36 @@
     L.tileLayer("https://cyberjapandata.gsi.go.jp/xyz/hillshademap/{z}/{x}/{y}.png", {
       attribution: "<a href='http://maps.gsi.go.jp/development/ichiran.html'>地理院タイル</a>",
       opacity: 0.4
-    }).addTo(map)
+    }).addTo(map);
+
+    map.attributionControl.addAttribution("<a href='https://github.com/frogcat/saigo-no-hitomoji-chizu'>fork me on GitHub</a>");
 
     map.zoomControl.setPosition("bottomright");
 
     L.hash(map);
 
-
     const knjLayer = Object.assign(L.gridLayer({
       maxNativeZoom: 15,
       minNativeZoom: 15
     }), {
+      onAdd: function(map) {
+        this._group = L.featureGroup().addTo(map);
+        L.GridLayer.prototype.onAdd.call(this, map);
+      },
+      onRemove: function(map) {
+        if (this._group) {
+          this._group.remove();
+          delete this._group;
+        }
+        L.GridLayer.prototype.onRemove.call(this, map);
+      },
       createTile: function(coords) {
         const div = document.createElement("div");
         div.layers = [];
         if (this._map.getZoom() < 13) return div;
         const url = L.Util.template("https://cyberjapandata.gsi.go.jp/xyz/experimental_anno/{z}/{x}/{y}.geojson", coords);
         fetch(url).then(a => a.ok ? a.json() : null).then(json => {
-          if (json === null) return;
-          if (!this._map || this._map.getZoom() < 13) return;
+          if (json === null || !this._map || this._map.getZoom() < 13 || !this._group) return;
           json.features.filter(x => x.properties.annoCtg.match(/^居住/)).forEach(x => {
             const knj = x.properties.knj;
             const k = knj.replace(/（.+）$/, "").split("").pop();
@@ -66,16 +77,15 @@
                 html: k,
                 className: "knj"
               })
-            }).bindTooltip(knj).addTo(map);
+            }).bindTooltip(knj).addTo(this._group);
             div.layers.push(m)
           });
         });
         return div;
-      },
+      }
     }).on("tileunload", function(e) {
       while (e.tile.layers.length > 0) {
-        const layer = e.tile.layers.pop();
-        map.removeLayer(layer);
+        e.tile.layers.pop().remove();
       }
     });
 
@@ -83,9 +93,6 @@
       const z = this.getZoom();
       if (z < 13) {
         if (this.hasLayer(knjLayer)) this.removeLayer(knjLayer);
-        map.eachLayer(function(layer) {
-          if (layer._icon !== undefined) map.removeLayer(layer);
-        });
       } else {
         if (!this.hasLayer(knjLayer)) this.addLayer(knjLayer);
       }
