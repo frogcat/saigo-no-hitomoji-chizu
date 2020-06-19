@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <title>saigo-no-hitomoji-chizu</title>
+  <meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.6.0/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-hash@0.2.1/leaflet-hash.js"></script>
+  <style>
+    #map {
+      position: absolute;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      right: 0;
+    }
+
+    .knj {
+      font-size: 18pt;
+      font-weight: bold;
+      color: white;
+      text-shadow: 0 0 8px black, 0 0 8px black, 0 0 8px black, 0 0 8px black, 0 0 8px black;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="map"></div>
+  <script>
+    var map = L.map("map", L.extend({
+      zoom: 13,
+      maxZoom: 18,
+      center: [35.6707, 139.7852]
+    }, L.Hash.parseHash(location.hash)));
+
+    L.tileLayer("https://cyberjapandata.gsi.go.jp/xyz/hillshademap/{z}/{x}/{y}.png", {
+      attribution: "<a href='http://maps.gsi.go.jp/development/ichiran.html'>地理院タイル</a>",
+      opacity: 0.4
+    }).addTo(map)
+
+    map.zoomControl.setPosition("bottomright");
+
+    L.hash(map);
+
+
+    const knjLayer = Object.assign(L.gridLayer({
+      maxNativeZoom: 15,
+      minNativeZoom: 15
+    }), {
+      createTile: function(coords) {
+        const div = document.createElement("div");
+        div.layers = [];
+        if (this._map.getZoom() < 13) return div;
+        const url = L.Util.template("https://cyberjapandata.gsi.go.jp/xyz/experimental_anno/{z}/{x}/{y}.geojson", coords);
+        fetch(url).then(a => a.ok ? a.json() : null).then(json => {
+          if (json === null) return;
+          json.features.filter(x => x.properties.annoCtg.match(/^居住/)).forEach(x => {
+            const knj = x.properties.knj;
+            const k = knj.replace(/（.+）$/, "").split("").pop();
+            const p = x.geometry.coordinates;
+            const m = L.marker([p[1], p[0]], {
+              icon: L.divIcon({
+                html: k,
+                className: "knj"
+              })
+            }).bindTooltip(knj).addTo(map);
+            div.layers.push(m)
+          });
+        });
+        return div;
+      },
+    }).on("tileunload", function(e) {
+      while (e.tile.layers.length > 0) {
+        const layer = e.tile.layers.pop();
+        map.removeLayer(layer);
+      }
+    });
+
+    map.on("zoomend", function() {
+      const z = this.getZoom();
+      if (z < 13) {
+        if (this.hasLayer(knjLayer)) this.removeLayer(knjLayer);
+      } else {
+        if (!this.hasLayer(knjLayer)) this.addLayer(knjLayer);
+      }
+    }).fire("zoomend");
+  </script>
+</body>
+
+</html>
