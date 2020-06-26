@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8" />
+  <title>saigo-no-hitomoji-chizu</title>
+  <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <link href="https://api.mapbox.com/mapbox-gl-js/v1.11.0/mapbox-gl.css" rel="stylesheet" />
+  <script src="https://api.mapbox.com/mapbox-gl-js/v1.11.0/mapbox-gl.js"></script>
+</head>
+
+<body>
+  <div id="map" style="position:absolute;top:0;left:0;right:0;bottom:0;"></div>
+  <script>
+    const style = {
+      "version": 8,
+      "glyphs": "https://maps.gsi.go.jp/xyz/noto-jp/{fontstack}/{range}.pbf",
+      "sources": {
+        "hillshademap": {
+          "type": "raster",
+          "tiles": [
+            "https://cyberjapandata.gsi.go.jp/xyz/hillshademap/{z}/{x}/{y}.png"
+          ],
+          "roundZoom": false,
+          "tileSize": 256,
+          "scheme": "xyz",
+          "minzoom": 2,
+          "maxzoom": 16,
+          "attribution": "<a href='https://maps.gsi.go.jp/development/ichiran.html'>地理院タイル</a>"
+        },
+        "bvmap": {
+          "type": "vector",
+          "tiles": [
+            "https://cyberjapandata.gsi.go.jp/xyz/experimental_bvmap/{z}/{x}/{y}.pbf"
+          ],
+          "minzoom": 4,
+          "maxzoom": 16,
+          "attribution": "<a href='https://maps.gsi.go.jp/development/ichiran.html'>地理院タイル</a>"
+        }
+      },
+      "layers": [{
+          "id": "background-layer",
+          "type": "background",
+          "paint": {
+            "background-color": "#000000"
+          }
+        },
+        {
+          "id": "hillshademap-layer",
+          "type": "raster",
+          "source": "hillshademap",
+          "minzoom": 2,
+          "maxzoom": 19,
+          "paint": {
+            "raster-opacity": 1
+          }
+        },
+        {
+          "id": "bvmap-layer",
+          "type": "symbol",
+          "source": "bvmap",
+          "source-layer": "label",
+          "minzoom": 13,
+          "maxzoom": 18,
+          "filter": [
+            "all",
+            ["==", "ftCode", 100],
+            ["==", "annoCtg", 210]
+          ],
+          "layout": {
+            "text-size": 32,
+            "text-field": [
+              "let",
+              "s", [
+                "case", ["==", ["index-of", "（", ["get", "knj"]], -1],
+                ["get", "knj"],
+                ["slice", ["get", "knj"], 0, ["index-of", "（", ["get", "knj"]]]
+              ],
+              [
+                "slice",
+                ["var", "s"],
+                ["-", ["length", ["var", "s"]], 1]
+              ]
+            ],
+            "text-font": [
+              "NotoSansCJKjp-Regular"
+            ]
+          },
+          "paint": {
+            "text-color": "rgba(0,0,0,1)",
+            "text-halo-color": "rgba(255,255,255,1)",
+            "text-halo-width": 3
+          }
+        }
+      ]
+    };
+
+    new mapboxgl.Map({
+        container: 'map',
+        style: style,
+        center: [139.76088, 35.67803],
+        zoom: 13,
+        hash: true
+      })
+      .addControl(new mapboxgl.NavigationControl(), "top-left")
+      .addControl(new mapboxgl.ScaleControl(), "bottom-left");
+  </script>
+
+</body>
+
+</html>
