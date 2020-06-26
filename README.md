@@ -9,4 +9,10 @@ saigo-no-hitomoji-chizu
 
 ## Demo
 
-<https://frogcat.github.io/saigo-no-hitomoji-chizu/>
+### Leaflet
+
+- <https://frogcat.github.io/saigo-no-hitomoji-chizu/>
+
+### mapbox-gl-js
+
+- <https://frogcat.github.io/saigo-no-hitomoji-chizu/mapbox-gl-js.html>
