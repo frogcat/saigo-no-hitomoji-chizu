@@ -12,6 +12,7 @@ saigo-no-hitomoji-chizu
 ### Leaflet
 
 - <https://frogcat.github.io/saigo-no-hitomoji-chizu/>
+- <https://frogcat.github.io/saigo-no-hitomoji-chizu/color.html>
 
 ### mapbox-gl-js
 

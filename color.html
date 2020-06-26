@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <title>saigo-no-hitomoji-chizu</title>
+  <meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.6.0/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-hash@0.2.1/leaflet-hash.js"></script>
+  <style>
+    #map {
+      position: absolute;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      right: 0;
+    }
+
+    .knj {
+      font-size: 18pt;
+      font-weight: bold;
+      color: white;
+      text-shadow: 0 0 8px black, 0 0 8px black, 0 0 8px black, 0 0 8px black, 0 0 8px black;
+    }
+
+    .knj.町,
+    .knj.宿,
+    .knj.里,
+    .knj.郷,
+    .knj.村 {
+      color: orange;
+    }
+
+    .knj.谷,
+    .knj.窪 {
+      color: red;
+    }
+
+    .knj.田,
+    .knj.畑 {
+      color: lime;
+    }
+
+    .knj.原,
+    .knj.木,
+    .knj.野,
+    .knj.森,
+    .knj.林 {
+      color: green;
+    }
+
+    .knj.丘,
+    .knj.台 {
+      color: brown;
+    }
+
+    .knj.海,
+    .knj.潮,
+    .knj.浜 {
+      color: blue;
+    }
+
+    .knj.川,
+    .knj.沢,
+    .knj.瀬,
+    .knj.澤,
+    .knj.池,
+    .knj.沼,
+    .knj.泉,
+    .knj.滝 {
+      color: cyan;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="map"></div>
+  <script>
+    const map = L.map("map", L.extend({
+      zoom: 13,
+      maxZoom: 18,
+      center: [35.6707, 139.7852]
+    }, L.Hash.parseHash(location.hash)));
+
+    L.tileLayer("https://cyberjapandata.gsi.go.jp/xyz/hillshademap/{z}/{x}/{y}.png", {
+      attribution: "<a href='http://maps.gsi.go.jp/development/ichiran.html'>地理院タイル</a>",
+      opacity: 0.4
+    }).addTo(map);
+
+    map.attributionControl.addAttribution("<a href='https://github.com/frogcat/saigo-no-hitomoji-chizu'>fork me on GitHub</a>");
+
+    map.zoomControl.setPosition("bottomright");
+
+    L.hash(map);
+
+    const knjLayer = Object.assign(L.gridLayer({
+      maxNativeZoom: 15,
+      minNativeZoom: 15
+    }), {
+      onAdd: function(map) {
+        this._group = L.featureGroup().addTo(map);
+        L.GridLayer.prototype.onAdd.call(this, map);
+      },
+      onRemove: function(map) {
+        if (this._group) {
+          this._group.remove();
+          delete this._group;
+        }
+        L.GridLayer.prototype.onRemove.call(this, map);
+      },
+      createTile: function(coords) {
+        const div = document.createElement("div");
+        div.layers = [];
+        if (this._map.getZoom() < 13) return div;
+        const url = L.Util.template("https://cyberjapandata.gsi.go.jp/xyz/experimental_anno/{z}/{x}/{y}.geojson", coords);
+        fetch(url).then(a => a.ok ? a.json() : null).then(json => {
+          if (json === null || !this._map || this._map.getZoom() < 13 || !this._group) return;
+          json.features.filter(x => x.properties.annoCtg.match(/^居住/)).forEach(x => {
+            const knj = x.properties.knj;
+            const k = knj.replace(/（.+）$/, "").split("").pop();
+            const p = x.geometry.coordinates;
+            const m = L.marker([p[1], p[0]], {
+              icon: L.divIcon({
+                html: k,
+                className: "knj " + k
+              })
+            }).bindTooltip(knj).addTo(this._group);
+            div.layers.push(m)
+          });
+        });
+        return div;
+      }
+    }).on("tileunload", function(e) {
+      while (e.tile.layers.length > 0) {
+        e.tile.layers.pop().remove();
+      }
+    });
+
+    map.on("zoomend", function() {
+      const z = this.getZoom();
+      if (z < 13) {
+        if (this.hasLayer(knjLayer)) this.removeLayer(knjLayer);
+      } else {
+        if (!this.hasLayer(knjLayer)) this.addLayer(knjLayer);
+      }
+    }).fire("zoomend");
+  </script>
+</body>
+
+</html>
